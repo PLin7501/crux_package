@@ -1,0 +1,10 @@
+to run the functions in this package, first import:
+
+import sys
+sys.path.append(r"C:\Users\patli\Downloads\brainflow")
+from crux_package import *
+
+In your case, replace r"C:\Users\patli\Downloads\brainflow" with the path to where every the package is.
+So if "crux_package" is in a folder called "Downloads", this should be the path to "Downloads".
+
+After running this, you should be able to call any function in the variable __all__ in __init__.py
