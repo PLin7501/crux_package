@@ -89,8 +89,22 @@ def get_silence_responses(signal, click_idx, end_idx):
     out = []
     for n in range(len(click_idx)-1):
         out.append(signal[end_idx[n]:click_idx[n+1]])
-        if n == len(click_idx)-1:
+        if n == len(click_idx)-2:
            length = click_idx[n+1] - end_idx[n]
            out.append(signal[end_idx[n+1]:end_idx[n+1]+length])
 
     return out #NOT an array
+
+
+def prior_silence_responses(signal, click_idx, end_idx):
+    out = []
+    # compute silence window length
+    length = click_idx[-1] - end_idx[-2]
+    # silence before first click
+    out.append(signal[click_idx[0]-length : click_idx[0]])
+
+    # silence windows between clicks
+    for n in range(len(click_idx)-1):
+        out.append(signal[end_idx[n] : click_idx[n+1]])
+
+    return out #NOT ARRAY
