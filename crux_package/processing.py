@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 import pandas as pd
 from scipy.signal import butter, filtfilt
@@ -8,6 +9,15 @@ def get_channel_from_txt(file, channel):
     df = pd.read_csv(file, sep=', ', comment="%", engine='python')
     values = np.array(df.loc[:, channel])
     return values
+
+
+# takes raw data (2d np array) and prints whether there are missing data
+def check_missing_samples(data):
+    count = 1
+    for val1, val2 in zip(data[0], data[0, 1:]):
+        if val2 == val1 + 1 or (val1, val2) == (255, 0):
+            count += 1
+    print(f"{count} samples found with {data.shape[1]} samples expected: {data.shape[1] - count} missing samples")
 
 
 # checks if any samples were not recieved from the hardware side and fills missing samples
@@ -62,10 +72,12 @@ def interpolate_missing_samples(sample_indices, voltages, cycle_size=256):
     return np.array(output_voltages)
 
 
+# DEPRECATED. Use mne.filter.filter_data instead
 # applies a bandpass filter to data
 # fs is the sampling rate
 # lowcut and highcut are the minimum and maximum frequencies
 def bandpass(data, fs, lowcut, highcut, order=4):
+    warnings.warn("processing.bandpass is deprecated. Use mne.filter.filter_data instead.")
     nyq = 0.5 * fs  # Nyquist frequency
     low = lowcut / nyq
     high = highcut / nyq
@@ -83,3 +95,12 @@ def get_subarrays(signal, ref_idx, length):
         out.append(signal[idx:idx + length])
     return np.stack(out)
 
+
+# gets average signal of data across all channels
+def get_avg(data, channels):
+    return data[np.array(list(channels.keys()))].mean(axis=0)
+
+
+# rereferences data to average and returns a new array
+def reference_to_avg(data, channels):
+    return data - get_avg(data, channels)

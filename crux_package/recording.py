@@ -4,28 +4,83 @@ import numpy as np
 from tqdm.auto import tqdm
 from playsound import playsound
 from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
-from .processing import interpolate_missing_samples
+
+from .globals import DELAY, REQUIRED_PARAMS
 from .utils import next_valid
 
 
-COLUMNS = [
-    'Sample Index', 'EXG Channel 0', 'EXG Channel 1', 'EXG Channel 2',
-    'EXG Channel 3', 'EXG Channel 4', 'EXG Channel 5', 'EXG Channel 6',
-    'EXG Channel 7', 'Accel Channel 0', 'Accel Channel 1',
-    'Accel Channel 2', 'Not Used', 'Digital Channel 0 (D11)',
-    'Digital Channel 1 (D12)', 'Digital Channel 2 (D13)',
-    'Digital Channel 3 (D17)', 'Not Used.1', 'Digital Channel 4 (D18)',
-    'Analog Channel 0', 'Analog Channel 1', 'Analog Channel 2', 'Timestamp',
-    'Marker Channel'
-]
-DELAY = 5
-SAMPLING_RATE = 250
+# context manager that starts and ends recording
+# returns self, board and data can be retrieved using self.board and self.data
+class Recording:
+    def __init__(self, serial_port):
+        self.serial_port = serial_port
+        self.data = None
+
+    def __enter__(self):
+        print("Starting recording ...")
+        BoardShim.enable_board_logger()
+        params = BrainFlowInputParams()
+        params.serial_port = self.serial_port
+        board = BoardShim(BoardIds.CYTON_BOARD.value, params)
+
+        self.board = board
+        self.board.prepare_session()
+        self.board.start_stream()
+
+        return self
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.data = self.board.get_board_data()
+        self.board.stop_stream()
+        self.board.release_session()
+        print("Finished recording")
 
 
-def _set_delay(delay):
-    global DELAY
-    DELAY = delay
+# runs OpenBCI recording and plays audio file during recording
+# pads audio file with globals.DELAY seconds
+# returns raw data (2d numpy array)
+def record(filepath, serial_port):
+    recording = Recording(serial_port)
+    with recording as rec:
+        board = rec.board
 
+        for _ in tqdm(range(DELAY), desc="Padding ..."):
+            time.sleep(1)    
+            board.insert_marker(1)
+        
+        print("started audio")
+        playsound(filepath)
+        print("finished audio")
+
+        board.insert_marker(2)
+        for _ in tqdm(range(DELAY), desc="Padding ..."):
+            time.sleep(1)
+
+    return recording.data
+
+
+def save_dict(data_dict, save_path, check_params=True):
+    save = True
+
+    if check_params:
+        for key, value in data_dict.items():
+            if key not in REQUIRED_PARAMS:
+                print(f"warning: key not in required params: \"{key}\"")
+        for key in REQUIRED_PARAMS:
+            if key not in data_dict.keys():
+                print(f"following key must be in data_dict: \"{key}\"")
+                save = False
+            
+    if save:
+        with open(save_path, 'wb') as f:
+            pickle.dump(data_dict)
+        print(f"saved to {save_path}")
+    else:
+        print("save aborted")
+
+
+'''
+DELETE AFTER RECORD FUNCTION ABOVE HAS BEEN TESTED
 
 # runs OpenBCI recording and plays audio file during recording
 # saves data in a .pkl file
@@ -70,52 +125,6 @@ def record(filepath, serial_port):
         }, file)
     print(f"Saved data as: {filename}")
     
-    return data, times
+    return data
+'''
 
-
-# opens a .pkl file and returns data and times
-def open_data(filepath):
-    with open(filepath, "rb") as file:
-        loaded_data = pickle.load(file)
-    return loaded_data['data'], loaded_data['times']
-
-
-def extract(data, channels, transform=None): 
-
-    if transform is None:
-        transform = lambda data: data
-    
-    # returns processed values in a channel
-    def get_channel_data(channel):
-        vals = data[COLUMNS.index(channel)]
-        vals = interpolate_missing_samples(
-            data[COLUMNS.index('Sample Index')],
-            vals
-        )
-        return transform(vals)[audio_start:audio_end]
-
-    audio_start = np.where(data[COLUMNS.index('Marker Channel')] == 1)[0][0]
-    audio_end = np.where(data[COLUMNS.index('Marker Channel')] == 2)[0][0]
-
-    if len(channels) == 1:
-        channels = channels[0]
-    if isinstance(channels, str):
-        return get_channel_data(channels)
-    
-    out = {}
-    for channel in channels:
-        out[channel] = get_channel_data(channel)
-    return out
-
-
-def print_time_latency(times):
-    latency = times['start_audio'] - times['start_openbci']
-    print(f"Intended latency: {DELAY} seconds")
-    print(f"Measured latency (start_openbci --> start_audio): {latency} seconds")
-    print(f"Sample latency: {(latency - DELAY) * SAMPLING_RATE} samples")
-
-
-def record_extract(filepath, serial_port, channels, transform=None):
-    data, times = record(filepath, serial_port)
-    print_time_latency(times)
-    return extract(data, channels, transform=transform), times
