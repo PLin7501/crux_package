@@ -3,6 +3,7 @@ import warnings
 from pathlib import Path
 from scipy.io import wavfile
 from .utils import next_valid
+from .globals import AUDIO_SAMPLING_RATE
 
 
 def generate_gaussian(length, scaling=16, random_seed=None):
@@ -76,7 +77,6 @@ def generate_train(pulses, counts, soa, shuffle=False, random_state=None):
 #take soa -> in indices
 #take counts -> 1D matrix, # of occurrences of each frequency
 #shuffle
-
     if random_state is not None:
         np.random.seed(random_state)
 
@@ -86,9 +86,7 @@ def generate_train(pulses, counts, soa, shuffle=False, random_state=None):
     for i in range(pulse_number):
         pulse_list.append(i)
         if len(pulses[i,:]) > soa:
-            print(
-                f"WARNING WARNING WARNING: Pulse {i} has greater length than SOA."
-            )
+            warnings.warn(f"Pulse {i} has greater length than SOA.")
             
     pulse_list = np.array(pulse_list)
 
@@ -96,21 +94,36 @@ def generate_train(pulses, counts, soa, shuffle=False, random_state=None):
     if shuffle:
         np.random.shuffle(train_blocks)
 
-    used = 0
-    train = np.zeros(soa_indices*sum(counts))
+    click_count = np.sum(counts)
+
+
+    train = np.zeros(soa_indices*click_count)
     for n in range(len(train_blocks)):
         cart = np.zeros(soa_indices)
         which= train_blocks[n]
         signal_mini = pulses[which,:]
         length = len(signal_mini)
-        cart[:length] += signal_mini
-        train[used:used+soa_indices] += cart
-        used +=soa_indices
+        cart[:length] = signal_mini
+        train[soa*n:soa*n+soa_indices] = cart
 
-    return train, train_blocks
+    staggers = np.zeros(click_count)
+    starts = np.arange(click_count) * soa + staggers
+    lengths = np.array([len(pulses[train_blocks[n]]) for n in range(click_count)])
+    ends = starts + lengths
 
+    datadict = {
+        "sampling_rate": AUDIO_SAMPLING_RATE, 
+        "soa": soa, 
+        "click_count": click_count, 
+        "starts": starts, 
+        "lengths": lengths, 
+        "ends": ends,
+        "labels": train_blocks
+    }
 
-def array_to_wav(arr, sampling_rate, save_path=None):
+    return train, train_blocks, datadict
+
+def array_to_wav(arr, save_path=None):
     try:
         # --- Basic validation ---
         arr = np.asarray(arr)
@@ -141,7 +154,7 @@ def array_to_wav(arr, sampling_rate, save_path=None):
             john = save_path
             save_path = Path(save_path)
 
-        wavfile.write(save_path, int(sampling_rate), pcm32)
+        wavfile.write(save_path, int(AUDIO_SAMPLING_RATE), pcm32)
         print(f"Audio file saved as: {save_path}")
 
         return john

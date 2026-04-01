@@ -16,6 +16,9 @@ DELAY = 20
 # sampling rate of OpenBCI hardware
 SAMPLING_RATE = 250
 
+# sampling rate of generated audio
+AUDIO_SAMPLING_RATE = 10000
+
 # required parameters for data dictionary
 REQUIRED_PARAMS = (
     "data",
@@ -24,7 +27,9 @@ REQUIRED_PARAMS = (
     "soa_indices",
     "click_number",
     "delay",
-    "channels"
+    "channels",
+    "end_idx",
+    "audio_dict"
 )
 
 
