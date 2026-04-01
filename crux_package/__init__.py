@@ -3,6 +3,7 @@ from .sound_generation import (
     generate_pulse, 
     generate_envelope, 
     generate_train, 
+    generate_oddball_train,
     array_to_wav
 )
 from .processing import (
@@ -30,6 +31,7 @@ __all__ = [
     "generate_pulse",
     "generate_envelope",
     "generate_train",
+    "generate_oddball_train",
     "array_to_wav",
 
     # processing.py

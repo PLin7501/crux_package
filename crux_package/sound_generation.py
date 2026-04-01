@@ -123,6 +123,71 @@ def generate_train(pulses, counts, soa, shuffle=False, random_state=None):
 
     return train, train_blocks, datadict
 
+
+# generates train for oddball paradigm
+# takes two pulses instead of a list of pulses as in generate_train
+# prob and counts are prob and number of target (oddball)
+def generate_oddball_train(nontarget, target, prob, counts, soa):
+#take in 2D matrix of pulses -> (frequency,length) pairs (units = indices)
+#take soa -> in indices
+#take counts -> 1D matrix, # of occurrences of each frequency
+#shuffle
+
+    def generate_train_blocks(prob, count):  # prob and count of target
+        out = []
+        for _ in range(count + 1):
+            while True:
+                val = np.random.choice([0, 1], size=1, p=[1 - prob, prob])[0]
+                out.append(val)  # 1 is target, 0 is nontarget
+                if val == 1:
+                    break
+        return np.array(out[:-1])
+
+    pulses = np.array([nontarget, target])
+
+    soa_indices = soa
+    pulse_number = pulses.shape[0]
+    pulse_list = []
+    for i in range(pulse_number):
+        pulse_list.append(i)
+        if len(pulses[i,:]) > soa:
+            warnings.warn(f"Pulse {i} has greater length than SOA.")
+            
+    pulse_list = np.array(pulse_list)
+
+    train_blocks = generate_train_blocks(prob, counts)
+
+    counts = [len(train_blocks) - sum(train_blocks), sum(train_blocks)]
+    click_count = np.sum(counts)
+
+
+    train = np.zeros(soa_indices*click_count)
+    for n in range(len(train_blocks)):
+        cart = np.zeros(soa_indices)
+        which= train_blocks[n]
+        signal_mini = pulses[which,:]
+        length = len(signal_mini)
+        cart[:length] = signal_mini
+        train[soa*n:soa*n+soa_indices] = cart
+
+    staggers = np.zeros(click_count)
+    starts = np.arange(click_count) * soa + staggers
+    lengths = np.array([len(pulses[train_blocks[n]]) for n in range(click_count)])
+    ends = starts + lengths
+
+    datadict = {
+        "sampling_rate": AUDIO_SAMPLING_RATE, 
+        "soa": soa, 
+        "click_count": click_count, 
+        "starts": starts, 
+        "lengths": lengths, 
+        "ends": ends,
+        "labels": train_blocks
+    }
+
+    return train, train_blocks, datadict
+
+
 def array_to_wav(arr, save_path=None):
     try:
         # --- Basic validation ---
