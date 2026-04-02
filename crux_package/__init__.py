@@ -12,8 +12,11 @@ from .processing import (
     interpolate_missing_samples,
     bandpass,
     get_subarrays,
+    get_subarrays_with_baseline,
     get_avg,
-    reference_to_avg
+    reference_to_avg,
+    get_ranges,
+    find_outliers
 )
 from .recording import (
     Recording,
@@ -40,8 +43,11 @@ __all__ = [
     "interpolate_missing_samples",
     "bandpass",
     "get_subarrays",
+    "get_subarrays_with_baseline",
     "get_avg",
     "reference_to_avg",
+    "get_ranges",
+    "find_outliers",
 
     # recording.py
     "Recording",

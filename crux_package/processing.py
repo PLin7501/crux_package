@@ -87,6 +87,16 @@ def bandpass(data, fs, lowcut, highcut, order=4):
     return filtered_data
 
 
+# gets average signal of data across all channels
+def get_avg(data, channels):
+    return data[np.array(list(channels.keys()))].mean(axis=0)
+
+
+# rereferences data to average and returns a new array
+def reference_to_avg(data, channels):
+    return data - get_avg(data, channels)
+
+
 # indexes signal at the indices in ref_idx and returns a matrix of subarrays
 # each subarray has "length" values and starts at ref_idx
 def get_subarrays(signal, ref_idx, length):
@@ -96,11 +106,28 @@ def get_subarrays(signal, ref_idx, length):
     return np.stack(out)
 
 
-# gets average signal of data across all channels
-def get_avg(data, channels):
-    return data[np.array(list(channels.keys()))].mean(axis=0)
+# gets subarrays, but also adjusts each subarray by a baseline period
+def get_subarrays_with_baseline(signal, ref_idx, length, base_length):
+    sub = get_subarrays(signal, ref_idx, length)
+    baseline = get_subarrays(
+        signal, ref_idx - base_length
+        , base_length
+        ).mean(axis=1).reshape(-1, 1)
+    return sub - baseline
 
 
-# rereferences data to average and returns a new array
-def reference_to_avg(data, channels):
-    return data - get_avg(data, channels)
+# returns of array of ranges for each signal in subarrays
+def get_ranges(subarrays):
+    out = []
+    for arr in subarrays:
+        out.append(arr.max() - arr.min())
+    return np.array(out)
+
+
+# finds outliers using a metric
+def find_outliers(subarrays, metric):
+    ranges = metric(subarrays)
+    Q1 = np.percentile(ranges, 25)
+    Q3 = np.percentile(ranges, 75)
+    IQR = Q3 - Q1
+    return ((ranges < Q1 - 1.5 * IQR) | (ranges > Q3 + 1.5 * IQR))
