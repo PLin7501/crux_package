@@ -13,6 +13,7 @@ from .processing import (
     bandpass,
     get_subarrays,
     get_subarrays_with_baseline,
+    moving_window_predict,
     get_avg,
     reference_to_avg,
     get_ranges,
@@ -21,10 +22,11 @@ from .processing import (
 from .recording import (
     Recording,
     record, 
-    save_dict
+    save_dict,
+    add_key_val_to_pkl
 )
 from .globals import (
-    _set_delay,
+    set_delay,
     print_required_params
 )
 
@@ -44,6 +46,7 @@ __all__ = [
     "bandpass",
     "get_subarrays",
     "get_subarrays_with_baseline",
+    "moving_window_predict",
     "get_avg",
     "reference_to_avg",
     "get_ranges",
@@ -53,8 +56,9 @@ __all__ = [
     "Recording",
     "record",
     "save_dict",
+    "add_key_val_to_pkl",
     
     # globals.py
-    "_set_delay",
+    "set_delay",
     "print_required_params"
 ]

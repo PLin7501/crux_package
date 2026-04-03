@@ -80,6 +80,7 @@ def generate_train(pulses, counts, soa, shuffle=False, random_state=None):
     if random_state is not None:
         np.random.seed(random_state)
 
+    pulses = np.array(pulses)
     soa_indices = soa
     pulse_number = pulses.shape[0]
     pulse_list = []

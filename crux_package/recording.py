@@ -103,3 +103,20 @@ def save_dict(data, channels, audio_dict, check_params=True):
         print("save aborted")
 
     return save_path
+
+
+# opens a .pkl file containing a data dict, then adds kwargs to it if the key is not used
+def add_key_val_to_pkl(fp, **kwargs):
+    with open(fp, 'rb') as f:
+        data = pickle.load(f)
+    for key, val in kwargs.items():
+        if key in data.keys():
+            print(f"\"{key}\" is already in {fp} and has not been added")
+            continue
+        if key not in REQUIRED_PARAMS:
+            print(f"\"{key}\" is not in REQUIRED_PARAMS but has been added")
+        else:
+            print(f"\"{key}\" has been added")
+        data[key] = val
+    with open(fp, 'wb') as f:
+        pickle.dump(data, f)

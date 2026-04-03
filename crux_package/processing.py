@@ -2,6 +2,7 @@ import warnings
 import numpy as np
 import pandas as pd
 from scipy.signal import butter, filtfilt
+from sklearn.linear_model import LinearRegression
 
 
 # gets a single channel (e.g. "EXG Channel 0") from a .txt file and returns as np array
@@ -78,6 +79,7 @@ def interpolate_missing_samples(sample_indices, voltages, cycle_size=256):
 # lowcut and highcut are the minimum and maximum frequencies
 def bandpass(data, fs, lowcut, highcut, order=4):
     warnings.warn("processing.bandpass is deprecated. Use mne.filter.filter_data instead.")
+
     nyq = 0.5 * fs  # Nyquist frequency
     low = lowcut / nyq
     high = highcut / nyq
@@ -95,6 +97,54 @@ def get_avg(data, channels):
 # rereferences data to average and returns a new array
 def reference_to_avg(data, channels):
     return data - get_avg(data, channels)
+
+
+# does piecewise regression between each (i,i+1) pair of indices and predicts values
+def _piecewise_predict(data, idx):
+    idx_ranges = []
+    for i, j in zip(idx, idx[1:]):
+        idx_ranges.append(np.arange(i, j))
+
+    sub = []
+    for idx_range in idx_ranges:
+        sub.append(data[idx_range])
+    
+    models = []
+    for idx_range, s in zip(idx_ranges, sub):
+        model = LinearRegression().fit(
+            idx_range.reshape(-1, 1), s
+        )
+        models.append(model)
+
+    out = []
+    for idx_range, model in zip(idx_ranges, models):
+        out.append(model.predict(idx_range.reshape(-1, 1)))
+
+    return np.concatenate(out)
+
+
+# performs piecewise_predicts across num_predicts windows and returns average prediction
+# num_windows determines number of piecewise segments
+def moving_window_predict(data, num_windows, num_predicts):  
+    def get_idx_with_shift(idx, shift):
+        out = np.concatenate([
+            [idx[0]],
+            idx[1:] - shift,
+            [idx[-1]]
+        ])
+        if shift == 0:
+            return out[:-1]
+        return out
+
+    idx = np.linspace(0, len(data), num_windows + 1).astype(int)
+    shifts = np.linspace(0, idx[1], num_predicts + 1)[:-1].astype(int)
+
+    predictions = []
+    for shift in shifts:
+        predictions.append(
+            _piecewise_predict(data, get_idx_with_shift(idx, shift))
+        )
+    return np.array(predictions).mean(axis=0)
 
 
 # indexes signal at the indices in ref_idx and returns a matrix of subarrays

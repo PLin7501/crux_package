@@ -33,7 +33,7 @@ REQUIRED_PARAMS = (
 )
 
 
-def _set_delay(delay):
+def set_delay(delay):
     global DELAY
     DELAY = delay
 
