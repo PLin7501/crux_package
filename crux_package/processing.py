@@ -100,7 +100,7 @@ def reference_to_avg(data, channels):
 
 
 # does piecewise regression between each (i,i+1) pair of indices and predicts values
-def _piecewise_predict(data, idx):
+def _piecewise_regression(data, idx):
     idx_ranges = []
     for i, j in zip(idx, idx[1:]):
         idx_ranges.append(np.arange(i, j))
@@ -125,7 +125,7 @@ def _piecewise_predict(data, idx):
 
 # performs piecewise_predicts across num_predicts windows and returns average prediction
 # num_windows determines number of piecewise segments
-def moving_window_predict(data, num_windows, num_predicts):  
+def moving_window_regression(data, num_windows, num_predicts):  
     def get_idx_with_shift(idx, shift):
         out = np.concatenate([
             [idx[0]],
@@ -142,7 +142,7 @@ def moving_window_predict(data, num_windows, num_predicts):
     predictions = []
     for shift in shifts:
         predictions.append(
-            _piecewise_predict(data, get_idx_with_shift(idx, shift))
+            _piecewise_regression(data, get_idx_with_shift(idx, shift))
         )
     return np.array(predictions).mean(axis=0)
 

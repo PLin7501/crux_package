@@ -33,10 +33,5 @@ REQUIRED_PARAMS = (
 )
 
 
-def set_delay(delay):
-    global DELAY
-    DELAY = delay
-
-
 def print_required_params():
     print(REQUIRED_PARAMS)

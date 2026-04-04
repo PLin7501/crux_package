@@ -5,8 +5,17 @@ from tqdm.auto import tqdm
 from playsound import playsound
 from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
 
-from .globals import DELAY, SAMPLING_RATE, REQUIRED_PARAMS
+from .globals import DELAY as glob_DELAY, SAMPLING_RATE, REQUIRED_PARAMS
 from .utils import next_valid
+
+
+DELAY = glob_DELAY
+
+
+def set_delay(delay):
+    global DELAY
+    DELAY = delay
+    print(f"Set delay to {DELAY} seconds")
 
 
 # context manager that starts and ends recording
